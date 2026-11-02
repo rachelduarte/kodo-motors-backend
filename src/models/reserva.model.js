@@ -11,7 +11,20 @@
  * activo es la bandera del borrado lógico: solo cambia con DELETE, nunca desde el body.
  */
 
+const { revisarCamposPermitidos } = require('../utils/validaciones');
+
 const ESTADOS = ['pendiente', 'confirmada', 'cancelada', 'atendida'];
+
+/** Estados que ocupan un horario en la agenda. */
+const ESTADOS_VIGENTES = ['pendiente', 'confirmada'];
+
+/** Estado actual → estados a los que puede pasar. Cancelada y atendida son finales. */
+const TRANSICIONES = {
+  pendiente: ['confirmada', 'cancelada'],
+  confirmada: ['atendida', 'cancelada'],
+  cancelada: [],
+  atendida: [],
+};
 
 /** Campos que el cliente puede enviar al crear o actualizar. */
 const CAMPOS_ENTRADA = ['fecha', 'hora', 'sede_id', 'servicio_id', 'vehiculo_id', 'estado', 'observacion'];
@@ -24,6 +37,10 @@ const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;  // HH:MM
 
 function esEnteroPositivo(valor) {
   return Number.isInteger(Number(valor)) && Number(valor) > 0;
+}
+
+function revisarCampos(datos) {
+  revisarCamposPermitidos(datos, CAMPOS_ENTRADA);
 }
 
 /**
@@ -130,8 +147,11 @@ function desdeFila(fila) {
 
 module.exports = {
   ESTADOS,
+  ESTADOS_VIGENTES,
+  TRANSICIONES,
   CAMPOS_ENTRADA,
   CAMPOS_OBLIGATORIOS,
+  revisarCampos,
   validar,
   limpiar,
   desdeFila,

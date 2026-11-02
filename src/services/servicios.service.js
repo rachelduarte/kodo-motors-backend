@@ -1,7 +1,9 @@
 // Servicio de servicios: reglas de negocio; no conoce req/res ni SQL
 const repositorio = require('../repositories/servicios.repository');
+const repositorioReservas = require('../repositories/reserva.repository');
 const modelo = require('../models/servicio.model');
 const HttpError = require('../utils/http-error');
+const { hoyISO } = require('../validators/common');
 
 async function listarServicios(filtros = {}) {
   const filtrosLimpios = modelo.validarFiltros(filtros);
@@ -52,6 +54,11 @@ async function actualizarServicio(id, cambios) {
 }
 
 async function eliminarServicio(id) {
+  const citasPendientes = await repositorioReservas.contarCitasPendientesDeServicio(id, hoyISO());
+  if (citasPendientes > 0) {
+    throw new HttpError(409, `No se puede dar de baja el servicio: tiene citas generadas pendientes (${citasPendientes})`);
+  }
+
   const eliminado = await repositorio.eliminar(id);
   if (!eliminado) {
     throw new HttpError(404, `No existe un servicio con id ${id}`);

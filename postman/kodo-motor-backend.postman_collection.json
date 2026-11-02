@@ -26,6 +26,10 @@
       "value": ""
     },
     {
+      "key": "fechaCita",
+      "value": ""
+    },
+    {
       "key": "repuestoId",
       "value": ""
     }
@@ -1588,6 +1592,19 @@
                   "pm.collectionVariables.set('reservaId', pm.response.json().id);"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Mañana, o pasado mañana si cae domingo: la sede 1 no atiende domingos",
+                  "const fecha = new Date();",
+                  "fecha.setDate(fecha.getDate() + (fecha.getDay() === 6 ? 2 : 1));",
+                  "const dosDigitos = (n) => String(n).padStart(2, '0');",
+                  "pm.collectionVariables.set('fechaCita', `${fecha.getFullYear()}-${dosDigitos(fecha.getMonth() + 1)}-${dosDigitos(fecha.getDate())}`);"
+                ]
+              }
             }
           ],
           "request": {
@@ -1610,7 +1627,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fecha\": \"2026-12-20\",\n  \"hora\": \"09:30\",\n  \"sede_id\": 1,\n  \"servicio_id\": 1,\n  \"vehiculo_id\": 1,\n  \"observacion\": \"Primera visita\"\n}",
+              "raw": "{\n  \"fecha\": \"{{fechaCita}}\",\n  \"hora\": \"09:30\",\n  \"sede_id\": 1,\n  \"servicio_id\": 1,\n  \"vehiculo_id\": 1,\n  \"observacion\": \"Primera visita\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

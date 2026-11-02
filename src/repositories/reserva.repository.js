@@ -86,20 +86,56 @@ async function eliminar(id) {
   return result.affectedRows > 0;
 }
 
-/**
- * Verifica si ya hay una reserva vigente (activa, pendiente o confirmada)
- * en la misma sede, fecha y hora. `idExcluir` sirve en el PUT para no chocar con la misma reserva.
- */
-async function existeChoque({ sede_id, fecha, hora }, idExcluir = null) {
+// columna es una constante de este archivo, nunca un dato del usuario
+async function existeVigente(columna, valor, fecha, hora, idExcluir) {
   let sql = `SELECT id FROM reservas
-             WHERE sede_id = ? AND fecha = ? AND hora = ?
+             WHERE ${columna} = ? AND fecha = ? AND hora = ?
                AND activo = 1
                AND estado IN ('pendiente', 'confirmada')`;
-  const valores = [sede_id, fecha, hora];
+  const valores = [valor, fecha, hora];
   if (idExcluir) { sql += ' AND id <> ?'; valores.push(idExcluir); }
 
   const [rows] = await pool.query(`${sql} LIMIT 1`, valores);
   return rows.length > 0;
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, existeChoque };
+/**
+ * Verifica si ya hay una reserva vigente (activa, pendiente o confirmada)
+ * en la misma sede, fecha y hora. `idExcluir` sirve en el PUT para no chocar con la misma reserva.
+ */
+async function existeChoque({ sede_id, fecha, hora }, idExcluir = null) {
+  return existeVigente('sede_id', sede_id, fecha, hora, idExcluir);
+}
+
+/** Verifica si el vehículo ya tiene una reserva vigente en esa fecha y hora, en cualquier sede. */
+async function existeChoqueVehiculo({ vehiculo_id, fecha, hora }, idExcluir = null) {
+  return existeVigente('vehiculo_id', vehiculo_id, fecha, hora, idExcluir);
+}
+
+// columna es una constante de este archivo, nunca un dato del usuario
+async function contarCitasPendientes(columna, id, desde) {
+  const [rows] = await pool.query(
+    `SELECT COUNT(*) AS total FROM reservas
+     WHERE ${columna} = ? AND fecha >= ?
+       AND activo = 1
+       AND estado IN ('pendiente', 'confirmada')`,
+    [id, desde],
+  );
+  return rows[0].total;
+}
+
+/** Cuenta las citas vigentes de una sede o servicio desde una fecha AAAA-MM-DD. */
+const contarCitasPendientesDeSede = (id, desde) => contarCitasPendientes('sede_id', id, desde);
+const contarCitasPendientesDeServicio = (id, desde) => contarCitasPendientes('servicio_id', id, desde);
+
+module.exports = {
+  listar,
+  obtenerPorId,
+  crear,
+  actualizar,
+  eliminar,
+  existeChoque,
+  existeChoqueVehiculo,
+  contarCitasPendientesDeSede,
+  contarCitasPendientesDeServicio,
+};

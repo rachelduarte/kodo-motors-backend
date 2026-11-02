@@ -58,10 +58,10 @@ datos (`kodo_db`, modelo común de la clase):
 
 | Recurso | Qué gestiona | Reglas principales |
 |---|---|---|
-| Sedes | Locales: distrito, dirección, teléfono y horario | Nombre único; teléfono de 9 dígitos; apertura antes del cierre |
-| Servicios | Trabajos del taller: categoría, precio y duración | Nombre único; categorías cerradas |
+| Sedes | Locales: distrito, dirección, teléfono y horario | Nombre único; teléfono fijo o celular de 9 dígitos; apertura antes del cierre; no se da de baja con citas pendientes |
+| Servicios | Trabajos del taller: categoría, precio y duración | Nombre único; categorías cerradas; duración de 15 a 480 minutos; no se da de baja con citas pendientes |
 | Catálogo | Vehículos Mazda nuevos en venta | Modelo + versión + año no se repite |
-| Reservas | Citas de taller por sede, servicio y vehículo | Sin dos reservas vigentes en la misma sede, fecha y hora; sede y servicio activos |
+| Reservas | Citas de taller por sede, servicio y vehículo | Citas futuras, cada 30 minutos y con máximo 30 días de anticipación; dentro del horario de la sede; sin dos reservas vigentes en la misma sede o para el mismo vehículo en la misma fecha y hora; `pendiente → confirmada/cancelada`, `confirmada → atendida/cancelada`; sede y servicio activos |
 | Repuestos | Inventario con alerta de bajo stock | Código único; no se da de baja con stock disponible |
 | Encuestas | Satisfacción del cliente por orden de servicio | Solo órdenes entregadas; una encuesta por orden |
 
@@ -72,7 +72,7 @@ trata como inexistente. Así se conserva el historial de Kodo Motors.
 ### Arquitectura por capas
 
 ```
-Postman ──HTTP──▶ src/app.js ──▶ routes/      (método + URL; validarId en /:id)
+Postman ──HTTP──▶ src/app.js ──▶ routes/      (método + URL; validadores antes del controlador)
                                    │
                                    ▼
                                  controllers/  (lee req, responde res; errores a next)
@@ -108,6 +108,7 @@ kodo-motor-backend/
 │   ├── repositories/
 │   ├── models/
 │   ├── middlewares/           # validarId, manejarErrores
+│   ├── validators/            # reglas de express-validator por recurso
 │   └── utils/                 # HttpError, validaciones
 ├── test-suite.js              # npm test
 ├── docker-compose.yml         # MySQL 8.4 y Adminer
@@ -167,7 +168,7 @@ Comprobación rápida: `GET http://localhost:4000/api/salud`.
 |---|---|
 | `npm run dev` | API con reinicio automático |
 | `npm start` | API sin nodemon |
-| `npm test` | 30 pruebas automáticas, sin necesidad de base de datos |
+| `npm test` | 49 pruebas automáticas, sin necesidad de base de datos |
 | `npm run bd:levantar` / `bd:detener` | Levanta o detiene MySQL |
 | `npm run bd:reiniciar` | Borra la base y la vuelve a crear desde `database/` |
 
@@ -181,7 +182,7 @@ Base: `http://localhost:4000/api`. Todos los recursos siguen el mismo contrato.
 | GET | `/<recurso>/:id` | 200 · el registro · 400 id inválido · 404 no existe o está dado de baja |
 | POST | `/<recurso>` | 201 · el registro creado · 400 datos inválidos · 409 valor único repetido |
 | PUT | `/<recurso>/:id` | 200 · el registro actualizado · 400 · 404 · 409 |
-| DELETE | `/<recurso>/:id` | 204 sin cuerpo (borrado lógico) · 404 si no existe o ya estaba de baja |
+| DELETE | `/<recurso>/:id` | 204 sin cuerpo (borrado lógico) · 404 si no existe o ya estaba de baja · 409 sede o servicio con citas pendientes |
 
 | Recurso | Ruta | Filtros del listado |
 |---|---|---|
@@ -197,8 +198,11 @@ Base: `http://localhost:4000/api`. Todos los recursos siguen el mismo contrato.
 Formato de error, igual en toda la API:
 
 ```json
-{ "mensaje": "Datos de reserva inválidos", "errores": ["El campo 'fecha' es obligatorio"] }
+{ "mensaje": "Datos inválidos", "errores": [{ "campo": "fecha", "mensaje": "La fecha es obligatoria" }] }
 ```
+
+En sedes, servicios, catálogo y reservas, los errores de formato llegan así, por campo. Las reglas
+que consultan la base responden `{ "mensaje": "..." }`, a veces con `errores` como lista de textos.
 
 La bandera de baja (`activo` / `activa`) **no se envía** en `POST` ni `PUT`: solo cambia con `DELETE`.
 

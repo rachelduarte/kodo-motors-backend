@@ -1,7 +1,9 @@
 // Servicio de sedes: reglas de negocio; no conoce req/res ni SQL
 const repositorio = require('../repositories/sedes.repository');
+const repositorioReservas = require('../repositories/reserva.repository');
 const modelo = require('../models/sede.model');
 const HttpError = require('../utils/http-error');
+const { hoyISO } = require('../validators/common');
 
 async function listarSedes(filtros = {}) {
   const filtrosLimpios = modelo.validarFiltros(filtros);
@@ -52,6 +54,11 @@ async function actualizarSede(id, cambios) {
 }
 
 async function eliminarSede(id) {
+  const citasPendientes = await repositorioReservas.contarCitasPendientesDeSede(id, hoyISO());
+  if (citasPendientes > 0) {
+    throw new HttpError(409, `No se puede dar de baja la sede: tiene citas generadas pendientes (${citasPendientes})`);
+  }
+
   const eliminada = await repositorio.eliminar(id);
   if (!eliminada) {
     throw new HttpError(404, `No existe una sede con id ${id}`);

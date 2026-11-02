@@ -9,14 +9,20 @@
  */
 const { Router } = require('express');
 const controlador = require('../controllers/reserva.controller');
-const validarId = require('../middlewares/validarId');
+const { idParam } = require('../validators/common');
+const validar = require('../validators/validar');
+const {
+  reglasCrearReserva,
+  reglasActualizarReserva,
+  reglasFiltrosReserva,
+} = require('../validators/reservas.validators');
 
 const router = Router();
 
-router.get('/', controlador.listar);
-router.get('/:id', validarId, controlador.obtenerPorId);
-router.post('/', controlador.crear);
-router.put('/:id', validarId, controlador.actualizar);
-router.delete('/:id', validarId, controlador.eliminar);
+router.get('/', reglasFiltrosReserva(), validar, controlador.listar);
+router.get('/:id', idParam(), validar, controlador.obtenerPorId);
+router.post('/', reglasCrearReserva(), validar, controlador.crear);
+router.put('/:id', idParam(), reglasActualizarReserva(), validar, controlador.actualizar);
+router.delete('/:id', idParam(), validar, controlador.eliminar);
 
 module.exports = router;
