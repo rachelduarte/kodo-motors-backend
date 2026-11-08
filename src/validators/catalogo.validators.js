@@ -8,6 +8,17 @@ const PRECIO_MAXIMO = 99999999.99;
 const reglasCatalogo = () => [
   body('id').not().exists().withMessage('El id no se puede enviar'),
 
+  // Acepta precioUsd (como lo devuelve el GET) y lo convierte a precio_usd
+  body().customSanitizer((cuerpo) => {
+    if (cuerpo && typeof cuerpo === 'object'
+      && cuerpo.precioUsd !== undefined && cuerpo.precio_usd === undefined) {
+      cuerpo.precio_usd = cuerpo.precioUsd;
+      delete cuerpo.precioUsd;
+    }
+    return cuerpo;
+  }),
+
+
   body('modelo').trim()
     .notEmpty().withMessage('El modelo es obligatorio').bail()
     .isIn(MODELOS).withMessage(`El modelo debe ser uno de: ${MODELOS.join(', ')}`),

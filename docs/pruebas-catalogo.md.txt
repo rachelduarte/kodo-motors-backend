@@ -1,0 +1,22 @@
+# Pruebas del servicio Catálogo (vía ngrok)
+
+Servicio probado: `/api/catalogo`
+Método de prueba: peticiones con curl a través de ngrok.
+
+## Resultados
+
+| # | Prueba | Resultado |
+|---|--------|-----------|
+| 1 | GET /api/catalogo/1 | 200 OK |
+| 2 | GET /api/catalogo/999 | 404 con mensaje claro |
+| 3 | POST inválido | 400 con errores por campo |
+| 3b | POST con precio negativo | 400, el precio debe ser mayor a 0 |
+| 4 | POST válido (CX-90) | 201 Created |
+| 5 | GET /api/catalogo/7 | 200 OK, dato persistido |
+
+## Hallazgos
+
+- Inconsistencia de nombres: el GET devuelve `precioUsd`, pero el POST espera `precio_usd`.
+- La validación devuelve todos los errores juntos, no solo el primero.
+- El modelo solo acepta una lista fija: Mazda2, Mazda3, CX-3, CX-30, CX-5, CX-50, CX-90, BT-50, MX-5.
+- El 404 para un ID inexistente trae un mensaje claro.
